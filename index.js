@@ -7,7 +7,7 @@ const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegPath = require('ffmpeg-static');
 const app = express();
-const port = 3000;
+const port = 5001;
 
 // Set ffmpeg path
 ffmpeg.setFfmpegPath(ffmpegPath);
