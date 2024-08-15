@@ -9,7 +9,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/video', (req, res) => {
-    const videoPath = '/root/projects/github/moviestreamer/videores/main/movie.mkv';
+    const videoPath = '/root/projects/github/moviestreamer/videores/main/movie.mp4';
     const videoStat = fs.statSync(videoPath);
     const fileSize = videoStat.size;
     const range = req.headers.range;
