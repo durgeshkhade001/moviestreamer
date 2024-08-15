@@ -1,4 +1,3 @@
-const videoPath = '/root/projects/github/moviestreamer/videores/main/movie.mkv'
 
 
 const express = require('express');
@@ -17,6 +16,8 @@ app.get('/', (req, res) => {
 });
 
 app.get('/video', (req, res) => {
+    const videoPath = '/root/projects/github/moviestreamer/videores/main/movie.mkv'
+
     const range = req.headers.range;
 
     if (!range) {
