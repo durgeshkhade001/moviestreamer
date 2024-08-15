@@ -1,48 +1,57 @@
+const videoPath = '/root/projects/github/moviestreamer/videores/main/movie.mkv'
+
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('ffmpeg-static');
 const app = express();
-const port = 5001;
+const port = 3000;
+
+// Set ffmpeg path
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/video', (req, res) => {
-    const videoPath = '/root/projects/github/moviestreamer/videores/main/movie.mkv';
-    const videoStat = fs.statSync(videoPath);
-    const fileSize = videoStat.size;
     const range = req.headers.range;
 
-    if (range) {
-        const parts = range.replace(/bytes=/, "").split("-");
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-        if(start >= fileSize) {
-            res.status(416).send('Requested range not satisfiable\n'+start+' >= '+fileSize);
-            return;
-        }
-
-        const chunksize = (end - start) + 1;
-        const file = fs.createReadStream(videoPath, { start, end });
-        const head = {
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': chunksize,
-            'Content-Type': 'video/mp4',
-        };
-
-        res.writeHead(206, head);
-        file.pipe(res);
-    } else {
-        const head = {
-            'Content-Length': fileSize,
-            'Content-Type': 'video/mp4',
-        };
-        res.writeHead(200, head);
-        fs.createReadStream(videoPath).pipe(res);
+    if (!range) {
+        return res.status(400).send('Requires Range header');
     }
+
+    const videoSize = fs.statSync(videoPath).size;
+    const CHUNK_SIZE = 10 ** 6; // 1MB
+    const start = Number(range.replace(/\D/g, ''));
+    const end = Math.min(start + CHUNK_SIZE, videoSize - 1);
+    const contentLength = end - start + 1;
+
+    const headers = {
+        'Content-Range': `bytes ${start}-${end}/${videoSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': contentLength,
+        'Content-Type': 'video/mp4',
+    };
+
+    res.writeHead(206, headers);
+
+    const stream = ffmpeg(videoPath)
+        .format('mp4')
+        .videoCodec('libx264')
+        .audioCodec('aac')
+        .outputOptions([
+            `-ss ${start / videoSize}`,
+            `-t ${contentLength / videoSize}`
+        ])
+        .pipe(res, { end: true });
+
+    stream.on('error', (err) => {
+        console.error(err);
+        res.status(500).send('Error processing video stream');
+    });
 });
 
 app.listen(port, () => {
